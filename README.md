@@ -1,3 +1,5 @@
+I update the code from python version 2 => 3
+
 This project is the code of AAAI 2018 paper ***When Will You Arrive? Estimating Travel Time Based on Deep Neural Networks***.
 
 We provide the complete version of code and part of sample data in Chengdu. You can replace the sample data with your own data easily. See the samples in data/ for more details.
