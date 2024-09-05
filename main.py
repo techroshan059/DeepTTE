@@ -158,7 +158,12 @@ def run():
     elogger = logger.Logger(args.log_file)
 
     if args.task == 'train':
+        log_dir = './saved_weights/'
         train(model, elogger, train_set=config['train_set'], eval_set=config['eval_set'])
+        weight_name = f'{args.log_file}_final_weights.pth'
+        weight_path = os.path.join(log_dir, weight_name)
+        torch.save(model.state_dict(), weight_path)
+        print(f"Weights saved at {weight_path}")
 
     elif args.task == 'test':
         # load the saved weight file
