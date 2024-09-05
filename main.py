@@ -109,9 +109,60 @@ def write_result(fs, pred_dict, attr):
         dateID = attr['dateID'].data[i]
         timeID = attr['timeID'].data[i]
         driverID = attr['driverID'].data[i]
+from sklearn.metrics import mean_squared_error, r2_score, mean_absolute_error
+def evaluate_metrics(y_true, y_pred):
+    # Calculate MSE
+    mse = mean_squared_error(y_true, y_pred)
+    
+    # Calculate RMSE
+    rmse = np.sqrt(mse)
+    
+    # Calculate R²
+    r2 = r2_score(y_true, y_pred)
+    
+    # Calculate MAE
+    mae = mean_absolute_error(y_true, y_pred)
+    
+    # Calculate MAPE
+    mape = np.mean(np.abs((y_true - y_pred) / y_true)) * 100  # MAPE as a percentage
+    
+  
+    print(f'RMSE: {rmse:.4f}')
+    print(f'R²: {r2:.4f}')
+    print(f'MAE: {mae:.4f}')
+    print(f'MAPE: {mape:.4f}%')
+    
+    # Return the calculated metrics
+    return mse, rmse, r2, mae, mape
+# def evaluate(model, elogger, files, save_result=False):
+#     model.eval()
+#     if save_result:
+#         fs = open('%s' % args.result_file, 'w')
 
+#     for input_file in files:
+#         running_loss = 0.0
+#         data_iter = data_loader.get_loader(input_file, args.batch_size)
+
+#         for idx, (attr, traj) in enumerate(data_iter):
+#             attr, traj = utils.to_var(attr), utils.to_var(traj)
+
+#             pred_dict, loss = model.eval_on_batch(attr, traj, config)
+
+#             if save_result:
+#                 write_result(fs, pred_dict, attr)
+
+#             running_loss += loss.data.item()
+
+#         print('Evaluate on file {}, loss {}'.format(input_file, running_loss / (idx + 1.0)))
+#         elogger.log('Evaluate File {}, Loss {}'.format(input_file, running_loss / (idx + 1.0)))
+
+#     if save_result:
+#         fs.close()
 def evaluate(model, elogger, files, save_result=False):
     model.eval()
+    all_preds = []
+    all_labels = []
+
     if save_result:
         fs = open('%s' % args.result_file, 'w')
 
@@ -122,18 +173,39 @@ def evaluate(model, elogger, files, save_result=False):
         for idx, (attr, traj) in enumerate(data_iter):
             attr, traj = utils.to_var(attr), utils.to_var(traj)
 
+            # Evaluate model on batch
             pred_dict, loss = model.eval_on_batch(attr, traj, config)
+
+            # Get predictions and labels
+            y_pred = pred_dict['pred'].data.cpu().numpy()  # Predictions
+            y_true = pred_dict['label'].data.cpu().numpy()  # Ground Truth
+            
+            # Collect predictions and labels for calculating metrics
+            all_preds.append(y_pred)
+            all_labels.append(y_true)
+
+            running_loss += loss.data.item()
 
             if save_result:
                 write_result(fs, pred_dict, attr)
 
-            running_loss += loss.data.item()
-
-        print('Evaluate on file {}, loss {}'.format(input_file, running_loss / (idx + 1.0)))
-        elogger.log('Evaluate File {}, Loss {}'.format(input_file, running_loss / (idx + 1.0)))
+        print(f"Evaluate on file {input_file}, Loss: {running_loss / (idx + 1):.4f}")
+        elogger.log(f"Evaluate on file {input_file}, Loss: {running_loss / (idx + 1):.4f}")
 
     if save_result:
         fs.close()
+
+    # Concatenate all predictions and labels
+    all_preds = np.concatenate(all_preds, axis=0)
+    all_labels = np.concatenate(all_labels, axis=0)
+    
+    # Compute evaluation metrics, including MAPE
+    mse, rmse, r2, mae, mape = evaluate_metrics(all_labels, all_preds)
+    
+    return mse, rmse, r2, mae, mape,y_pred,y_true
+
+
+    
 
 def get_kwargs(model_class):
     model_args = inspect.getfullargspec(model_class.__init__).args  # Use `getfullargspec` for Python 3
